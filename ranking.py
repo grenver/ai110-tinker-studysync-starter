@@ -1,8 +1,7 @@
-"""
+﻿"""
 StudySync -- Find a Study Spot (Ticket 3, Tinker 3B).
 
-TICKET: none of the ranking logic is implemented yet -- every function
-below is a stub.
+Load, score, rank, and explain campus study spots.
 """
 
 import csv
@@ -15,9 +14,13 @@ def load_study_spots(csv_path: str) -> list:
     Load study spots from a CSV into a list of dicts, converting
     "distance_miles" to float and "seats_available" to int.
     """
-    # TODO: use csv.DictReader to read csv_path into a list of dicts.
-    # TODO: convert row["distance_miles"] to float and row["seats_available"] to int for each row.
-    raise NotImplementedError
+    with open(csv_path, newline="", encoding="utf-8") as csv_file:
+        spots = []
+        for row in csv.DictReader(csv_file):
+            row["distance_miles"] = float(row["distance_miles"])
+            row["seats_available"] = int(row["seats_available"])
+            spots.append(row)
+    return spots
 
 
 def score_study_spot(profile: dict, spot: dict) -> tuple:
@@ -29,11 +32,21 @@ def score_study_spot(profile: dict, spot: dict) -> tuple:
     Return (score, reasons) where reasons is a list of short strings
     explaining what contributed to the score, e.g. ["quiet enough", "close enough"].
     """
-    # TODO: implement additive/weighted scoring using at least noise_level
-    # (compare using NOISE_ORDER), distance_miles vs max_distance, and
-    # seats_available vs min_seats. Append a short string to `reasons` for
-    # each factor that contributed, whether it helped or hurt the score.
-    raise NotImplementedError
+    factors = [
+        (NOISE_ORDER[spot["noise_level"]] <= NOISE_ORDER[profile["max_noise"]], 3,
+         f"noise {spot['noise_level']} (maximum {profile['max_noise']})"),
+        (spot["distance_miles"] <= profile["max_distance"], 2,
+         f"distance {spot['distance_miles']:g} miles (maximum {profile['max_distance']:g})"),
+        (spot["seats_available"] >= profile["min_seats"], 1,
+         f"{spot['seats_available']} seats (minimum {profile['min_seats']})"),
+    ]
+    score = 0.0
+    reasons = []
+    for matches, weight, description in factors:
+        contribution = weight if matches else -weight
+        score += contribution
+        reasons.append(f"{description}: {'matches' if matches else 'does not match'} ({contribution:+d})")
+    return score, reasons
 
 
 def rank_study_spots(profile: dict, spots: list, k: int = 3) -> list:
@@ -41,16 +54,17 @@ def rank_study_spots(profile: dict, spots: list, k: int = 3) -> list:
     Score every study spot, then return the top k as (spot, score, reasons)
     tuples, sorted by score descending.
     """
-    # TODO: score every spot with score_study_spot(), then use
-    # sorted(..., key=..., reverse=True)[:k] to keep only the top k.
-    raise NotImplementedError
+    if k < 0:
+        raise ValueError("k must be non-negative")
+    scored = [(spot, *score_study_spot(profile, spot)) for spot in spots]
+    # Stable sorting preserves CSV order for ties.
+    return sorted(scored, key=lambda result: result[1], reverse=True)[:k]
 
 
 def format_results(ranked: list) -> None:
     """Print each ranked study spot with its score and reasons, one line each."""
-    # TODO: for each (spot, score, reasons) tuple, print a readable line, e.g.:
-    # "1. Innovation Commons -- Score: 5.0 -- Because: quiet enough, close enough"
-    raise NotImplementedError
+    for position, (spot, score, reasons) in enumerate(ranked, start=1):
+        print(f"{position}. {spot['name']} -- Score: {score:.1f} -- Because: {'; '.join(reasons)}")
 
 
 def render_study_spot_tab():
@@ -69,7 +83,7 @@ def render_study_spot_tab():
             for spot, score, reasons in ranked:
                 st.write(f"**{spot['name']}** -- Score: {score:.1f} -- Because: {', '.join(reasons)}")
         except NotImplementedError:
-            st.warning("🚧 Ranking isn't implemented yet -- that's Tinker 3B's ticket.")
+            st.warning("ðŸš§ Ranking isn't implemented yet -- that's Tinker 3B's ticket.")
 
 
 if __name__ == "__main__":
@@ -77,3 +91,4 @@ if __name__ == "__main__":
     profile = {"max_noise": "moderate", "max_distance": 1.0, "min_seats": 4}
     ranked = rank_study_spots(profile, spots, k=3)
     format_results(ranked)
+

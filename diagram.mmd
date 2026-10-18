@@ -1,2 +1,8 @@
-<!-- Save your AI-generated Mermaid flowchart source here (Tinker 3B, Part 4). -->
-<!-- Replace this comment with a fenced ```mermaid``` code block: input -> process/score -> output. -->
+flowchart TD
+    A[CSV input] --> B[DictReader: convert distance and seats to numbers]
+    B --> C[Score every spot and collect reasons]
+    P[Student profile: noise, distance, seats] --> C
+    C --> D[Sort by score descending]
+    D --> E[Slice top k]
+    E --> F[Formatted output: name, score, reasons]
+    F --> G[Console or Streamlit tab]
